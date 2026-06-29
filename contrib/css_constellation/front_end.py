@@ -16,7 +16,7 @@ import select
 import socket
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Mapping, Tuple
+from typing import Dict, Mapping, Optional, Tuple
 
 from css_tf import FrameSpec, read_scid
 
@@ -56,6 +56,7 @@ class FrontEnd:
         self.bind_host = str(ground.get("host", "0.0.0.0"))
         self.tc_port = int(ground.get("front_end_tc_port", 8010))
         self.tm_port = int(ground.get("front_end_tm_port", 8011))
+        self.tc_routes = _int_key_map(ground.get("tc_routes", {}))
         self.satellites = self._load_satellites(config.get("satellites") or {})
         self.cosmos_tf = self._load_cosmos(config.get("cosmos_tf") or {})
         self.tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -82,7 +83,7 @@ class FrontEnd:
                 scid=scid,
                 host=str(value["host"]),
                 feeder_tc_port=int(value.get("feeder_tc_port", value.get("tc_port", 5012))),
-                visible=bool(value.get("visible", True)),
+                visible=bool(value.get("visible", value.get("ground_visible", True))),
             )
         return result
 
@@ -106,12 +107,14 @@ class FrontEnd:
         for scid in sorted(self.satellites):
             sat = self.satellites[scid]
             cosmos = self.cosmos_tf.get(scid)
+            gateway = self._gateway_for_tc(scid)
             logging.info(
-                "SCID=%s visible=%s TC->%s:%s TM->%s",
+                "SCID=%s visible=%s TC gateway=%s TC->%s:%s TM->%s",
                 scid,
                 sat.visible,
-                sat.host,
-                sat.feeder_tc_port,
+                gateway.scid if gateway else "none",
+                gateway.host if gateway else "-",
+                gateway.feeder_tc_port if gateway else "-",
                 f"{cosmos.host}:{cosmos.tm_port}" if cosmos else "not configured",
             )
 
@@ -130,17 +133,30 @@ class FrontEnd:
                 except Exception:
                     logging.exception("dropping malformed datagram from %s", addr)
 
+    def _gateway_for_tc(self, dest_scid: int) -> Optional[SatelliteRoute]:
+        direct = self.satellites.get(dest_scid)
+        if direct is not None and direct.visible:
+            return direct
+        gateway_scid = self.tc_routes.get(dest_scid)
+        if gateway_scid is None:
+            return None
+        gateway = self.satellites.get(gateway_scid)
+        if gateway is None:
+            logging.warning("TC route for SCID %s points to unknown gateway SCID %s", dest_scid, gateway_scid)
+            return None
+        if not gateway.visible:
+            logging.info("TC route for SCID %s points to gateway %s, but it is not visible", dest_scid, gateway_scid)
+            return None
+        return gateway
+
     def _handle_tc(self, data: bytes, addr: Address) -> None:
-        scid = read_scid(data, self.frame_spec)
-        sat = self.satellites.get(scid)
-        if sat is None:
-            logging.warning("TC from %s has unknown SCID %s; dropping", addr, scid)
+        dest_scid = read_scid(data, self.frame_spec)
+        gateway = self._gateway_for_tc(dest_scid)
+        if gateway is None:
+            logging.warning("TC from %s for SCID %s has no visible route; dropping", addr, dest_scid)
             return
-        if not sat.visible:
-            logging.info("TC for SCID %s dropped: satellite not in visibility", scid)
-            return
-        self.tx.sendto(data, sat.tc_address)
-        logging.debug("TC SCID %s: %s -> %s", scid, addr, sat.tc_address)
+        self.tx.sendto(data, gateway.tc_address)
+        logging.debug("TC SCID %s: %s -> gateway SCID %s %s", dest_scid, addr, gateway.scid, gateway.tc_address)
 
     def _handle_tm(self, data: bytes, addr: Address) -> None:
         scid = read_scid(data, self.frame_spec)
@@ -150,6 +166,14 @@ class FrontEnd:
             return
         self.tx.sendto(data, cosmos.tm_address)
         logging.debug("TM SCID %s: %s -> %s", scid, addr, cosmos.tm_address)
+
+
+def _int_key_map(raw: object) -> Dict[int, int]:
+    if raw is None:
+        return {}
+    if not isinstance(raw, Mapping):
+        raise ValueError("route maps must be JSON objects keyed by SCID")
+    return {int(k): int(v) for k, v in raw.items()}
 
 
 def load_config(path: str | Path) -> Mapping[str, object]:
