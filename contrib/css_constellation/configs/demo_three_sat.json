@@ -1,0 +1,76 @@
+{
+  "description": "Loopback three-satellite CSS constellation demo. SCID 101 is the only spacecraft in ground visibility; SCID 102 and 103 are reached through static ISL routes while keeping their destination SCID in the transfer-frame header.",
+  "frame": {
+    "scid_offset": 2,
+    "scid_length": 2,
+    "scid_mask": "0xffff",
+    "scid_shift": 0,
+    "spi_offset": 6,
+    "spi_length": 2,
+    "header_length": 8
+  },
+  "ground": {
+    "host": "127.0.0.1",
+    "front_end_tc_port": 18010,
+    "front_end_tm_port": 18011,
+    "tc_routes": {
+      "102": 101,
+      "103": 101
+    }
+  },
+  "cosmos_tf": {
+    "101": { "host": "127.0.0.1", "tm_port": 16011 },
+    "102": { "host": "127.0.0.1", "tm_port": 26011 },
+    "103": { "host": "127.0.0.1", "tm_port": 36011 }
+  },
+  "satellites": {
+    "101": {
+      "scid": 101,
+      "host": "127.0.0.1",
+      "visible": true,
+      "ground_visible": true,
+      "feeder_tc_port": 15012,
+      "isl_tc_port": 15112,
+      "isl_tm_port": 15111,
+      "local_ci_host": "127.0.0.1",
+      "local_ci_port": 15010,
+      "local_tm_port": 15011,
+      "tc_routes": { "102": 102, "103": 102 },
+      "tm_route_to_ground": null,
+      "drop_spi_values": ["ffff"],
+      "min_tc_interval_ms": 0
+    },
+    "102": {
+      "scid": 102,
+      "host": "127.0.0.1",
+      "visible": false,
+      "ground_visible": false,
+      "feeder_tc_port": 25012,
+      "isl_tc_port": 25112,
+      "isl_tm_port": 25111,
+      "local_ci_host": "127.0.0.1",
+      "local_ci_port": 25010,
+      "local_tm_port": 25011,
+      "tc_routes": { "101": 101, "103": 103 },
+      "tm_route_to_ground": 101,
+      "drop_spi_values": ["ffff"],
+      "min_tc_interval_ms": 0
+    },
+    "103": {
+      "scid": 103,
+      "host": "127.0.0.1",
+      "visible": false,
+      "ground_visible": false,
+      "feeder_tc_port": 35012,
+      "isl_tc_port": 35112,
+      "isl_tm_port": 35111,
+      "local_ci_host": "127.0.0.1",
+      "local_ci_port": 35010,
+      "local_tm_port": 35011,
+      "tc_routes": { "101": 102, "102": 102 },
+      "tm_route_to_ground": 102,
+      "drop_spi_values": ["ffff"],
+      "min_tc_interval_ms": 0
+    }
+  }
+}
