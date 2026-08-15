@@ -4,30 +4,23 @@
     <start-time>814254200.0</start-time>
 
     <!-- Ground Software -->
-    <!-- cosmos (default), openc3, fprime, yamcs, or multiple (for yamcs and Cosmos with cFS only) -->
-    <gsw>cosmos</gsw>
+    <!-- This scenario intentionally launches two GDS viewpoints: -->
+    <!-- COSMOS = rogue/compromised trusted ground station; YAMCS = legitimate ground station. -->
+    <!-- Valid values include cosmos, openc3, fprime, yamcs, or multiple. -->
+    <gsw>multiple</gsw>
 
     <!-- Flight Software -->
-    <!-- cfs (default) or fprime -->
     <fsw>cfs</fsw>
 
     <!-- Scenario -->
-    <!-- STF1 (default) or Gateway or DeepSpace -->
-    <scenario>Gateway</scenario>
+    <!-- STF1 is used so 42 RF in-view/occultation behaviour can gate the radio links. -->
+    <scenario>STF1</scenario>
 
-    <!-- Number of spacecraft -->
-    <!-- Note this is experimental and not ready for use beyond proof of concept -->
-    <number-spacecraft>3</number-spacecraft>
+    <!-- Minimal constellation research cell: two spacecraft -->
+    <number-spacecraft>2</number-spacecraft>
 
-    <!-- Spacecraft 1 Configuration - options are as follows -->
-    <!-- sc-minimal-config.xml (only cFS heritage applications and the sample app) -->
-    <!-- sc-mission-config.xml (default, minimal + generic components and ADCS) -->
-    <!-- sc-research-config.xml (mission + research integrations, arducam, and generic-thruster) -->
-    <!-- sc-fprime-config.xml (only configuration supporting F') -->
+    <!-- Both spacecraft use the mission configuration so radio, CryptoLib-facing -->
+    <!-- command paths, ADCS and telemetry needed by the cyber experiment are present. -->
     <sc-1-cfg>spacecraft/sc-mission-config.xml</sc-1-cfg>
     <sc-2-cfg>spacecraft/sc-mission-config.xml</sc-2-cfg>
-    <sc-3-cfg>spacecraft/sc-mission-config.xml</sc-3-cfg>
-
-    <!-- Spacecraft N Configuration -->
-    <!-- <sc-N-cfg>sc-minimal-config.xml</sc-N-cfg> -->
 </nos3-mission-cfg>
