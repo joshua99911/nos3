@@ -5,7 +5,7 @@ set -e
 #
 # The upstream multiple-GDS launcher is still a single-spacecraft launcher,
 # while the upstream multiple-spacecraft launcher has the correct shared-42
-# topology but only launches one GDS/CryptoLib path.  This wrapper derives a
+# topology but only launches one GDS/CryptoLib path. This wrapper derives a
 # two-spacecraft, dual-GDS launcher from the upstream multiple-spacecraft
 # launcher at runtime so the two capabilities are combined without duplicating
 # the large upstream launch script.
@@ -17,8 +17,8 @@ source "$SCRIPT_DIR/../../scripts/env.sh"
 
 BASE_LAUNCH="$BASE_DIR/scripts/fsw/fsw_cfs_launch_multiple_sc.sh"
 # The upstream launch script is designed to run from cfg/build after configure.py
-# copies it there.  Keep the generated launcher in that directory so its
-# BASH_SOURCE-relative env.sh and cfg/build/fsw paths remain valid.  Generating
+# copies it there. Keep the generated launcher in that directory so its
+# BASH_SOURCE-relative env.sh and cfg/build/fsw paths remain valid. Generating
 # it in /tmp makes the upstream script incorrectly resolve /scripts/env.sh.
 GENERATED_LAUNCH="$BASE_DIR/cfg/build/launch_2sat_2gds.generated.sh"
 
@@ -49,7 +49,7 @@ replace_once(
     'second GDS launch',
 )
 
-# The reference launcher is a 3-spacecraft demonstration.  This scenario is 2 SC.
+# The reference launcher is a 3-spacecraft demonstration. This scenario is 2 SC.
 replace_once('export SATNUM=3', 'export SATNUM=2', 'SATNUM')
 replace_once(
     'echo "sc03 - Create spacecraft network..."\n$DNETWORK create "nos3-sc03" --subnet=192.168.3.0/24\n',
@@ -104,4 +104,11 @@ PY
 
 chmod +x "$GENERATED_LAUNCH"
 echo "Launching combined 2-spacecraft / 2-GDS topology..."
+
+# The upstream NOS3 launcher intentionally uses commands such as plain mkdir
+# for paths that may already exist. It was not written for errexit mode; when
+# sourced under this wrapper's `set -e`, a harmless mkdir return code of 1
+# aborts launch immediately after "Make data folders...". Keep strict failure
+# handling for generation above, then restore the upstream launch semantics.
+set +e
 source "$GENERATED_LAUNCH"
