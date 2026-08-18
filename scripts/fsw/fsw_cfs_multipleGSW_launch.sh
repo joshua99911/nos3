@@ -16,14 +16,18 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source "$SCRIPT_DIR/../../scripts/env.sh"
 
 BASE_LAUNCH="$BASE_DIR/scripts/fsw/fsw_cfs_launch_multiple_sc.sh"
-TMP_LAUNCH="/tmp/nos3_2sat_2gds_launch.sh"
+# The upstream launch script is designed to run from cfg/build after configure.py
+# copies it there.  Keep the generated launcher in that directory so its
+# BASH_SOURCE-relative env.sh and cfg/build/fsw paths remain valid.  Generating
+# it in /tmp makes the upstream script incorrectly resolve /scripts/env.sh.
+GENERATED_LAUNCH="$BASE_DIR/cfg/build/launch_2sat_2gds.generated.sh"
 
 if [ ! -f "$BASE_LAUNCH" ]; then
     echo "ERROR: multiple-spacecraft launcher not found: $BASE_LAUNCH" >&2
     exit 1
 fi
 
-python3 - "$BASE_LAUNCH" "$TMP_LAUNCH" <<'PY'
+python3 - "$BASE_LAUNCH" "$GENERATED_LAUNCH" <<'PY'
 from pathlib import Path
 import sys
 
@@ -98,6 +102,6 @@ replace_once(
 dst.write_text(text)
 PY
 
-chmod +x "$TMP_LAUNCH"
+chmod +x "$GENERATED_LAUNCH"
 echo "Launching combined 2-spacecraft / 2-GDS topology..."
-source "$TMP_LAUNCH"
+source "$GENERATED_LAUNCH"
