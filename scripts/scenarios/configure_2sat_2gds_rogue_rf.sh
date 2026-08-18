@@ -18,7 +18,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 mission = Path("cfg/nos3-mission.xml")
-tree = ET.parse(mission)
+tree = ET.parse(str(mission))
 root = tree.getroot()
 required = {
     "gsw": "multiple",
@@ -29,22 +29,28 @@ required = {
 for tag, value in required.items():
     node = root.find(tag)
     if node is None:
-        raise SystemExit(f"Missing <{tag}> in {mission}")
+        raise SystemExit("Missing <{}> in {}".format(tag, mission))
     node.text = value
 
 # Keep exactly the first two spacecraft definitions in the scenario mission.
 for child in list(root):
-    if child.tag.startswith("sc-") and child.tag.endswith("-cfg") and child.tag not in {"sc-1-cfg", "sc-2-cfg"}:
+    if (child.tag.startswith("sc-") and child.tag.endswith("-cfg") and
+            child.tag not in {"sc-1-cfg", "sc-2-cfg"}):
         root.remove(child)
+
 for idx in (1, 2):
-    tag = f"sc-{idx}-cfg"
+    tag = "sc-{}-cfg".format(idx)
     node = root.find(tag)
     if node is None:
         node = ET.SubElement(root, tag)
     node.text = "spacecraft/sc-mission-config.xml"
 
-ET.indent(tree, space="    ")
-tree.write(mission, encoding="unicode")
+# ElementTree.indent() was introduced in Python 3.9. NOS3 installations may
+# still use Python 3.8, so pretty-print only when the function is available.
+if hasattr(ET, "indent"):
+    ET.indent(tree, space="    ")
+
+tree.write(str(mission), encoding="unicode")
 with mission.open("a") as fp:
     fp.write("\n")
 
